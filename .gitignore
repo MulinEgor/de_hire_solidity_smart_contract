@@ -1,0 +1,7 @@
+**/**cache**
+.env
+.history
+.hypothesis/
+build/
+reports/
+.venv/
