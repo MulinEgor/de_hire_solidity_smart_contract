@@ -247,7 +247,7 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
 
     /// @dev If the rating type is both, return all the ratings count
     ///      Otherwise, return the ratings count filtered by the rating type
-    function getRatingsCount(address _ratedAddress, RatingType _ratingType) external view returns (uint) {
+    function getRatingsCount(address _ratedAddress, RatingType _ratingType) public view returns (uint) {
         if (_ratingType == RatingType.Both) {
             return ratings[_ratedAddress].length;
         } else {
@@ -263,6 +263,11 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
 
             return count;
         }
+    }
+
+    function getKarma(address _address) external view returns (int) {
+        return
+            int(getRatingsCount(_address, RatingType.Positive)) - int(getRatingsCount(_address, RatingType.Negative));
     }
 
     /// @custom:modifies jobExists

@@ -64,4 +64,10 @@ interface IRatingContract {
     /// @param _ratingType The type of the rating
     /// @return The ratings count
     function getRatingsCount(address _ratedAddress, RatingType _ratingType) external view returns (uint);
+
+    /// @notice Function for getting the karma,
+    ///         where karma is (positive ratings count - negative ratings count)
+    /// @param _address The address of the person
+    /// @return The karma
+    function getKarma(address _address) external view returns (int);
 }
