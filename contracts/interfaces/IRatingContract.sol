@@ -25,6 +25,13 @@ interface IRatingContract {
         Employee
     }
 
+    /// @notice Enum for rating types
+    enum RatingType {
+        Positive,
+        Negative,
+        Both
+    }
+
     // MARK: Events
 
     /// @notice Event for the rating creation
@@ -45,4 +52,16 @@ interface IRatingContract {
         Role _role,
         address _ratedAddress
     ) external;
+
+    /// @notice Function for getting all the ratings for specified address
+    /// @param _ratedAddress The address of the rated person
+    /// @param _ratingType The type of the rating
+    /// @return The ratings
+    function getRatings(address _ratedAddress, RatingType _ratingType) external view returns (Rating[] memory);
+
+    /// @notice Function for getting the ratings count
+    /// @param _ratedAddress The address of the rated person
+    /// @param _ratingType The type of the rating
+    /// @return The ratings count
+    function getRatingsCount(address _ratedAddress, RatingType _ratingType) external view returns (uint);
 }

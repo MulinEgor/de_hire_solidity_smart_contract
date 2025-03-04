@@ -23,6 +23,7 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     mapping(uint => address[]) public jobApplications;
 
     /// @notice Mapping for the ratings
+    /// @dev The key is the employer or employee address, the value is the array of ratings
     mapping(address => Rating[]) public ratings;
 
     /// @notice Mapping for the reviews
@@ -61,7 +62,7 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     /// @notice Constructor for the WorkContract
     constructor() Ownable(msg.sender) {}
 
-    // MARK: Unathorized job functions
+    // MARK: Job functions
 
     /// @custom:emits JobCreatedEvent
     function createJob(uint _deadline, string memory _description) external payable {
@@ -222,6 +223,47 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     }
 
     // MARK: Rating functions
+
+    /// @dev If the rating type is both, return all the ratings
+    ///      Otherwise, return the ratings filtered by the rating type
+    function getRatings(address _ratedAddress, RatingType _ratingType) external view returns (Rating[] memory) {
+        if (_ratingType == RatingType.Both) {
+            return ratings[_ratedAddress];
+        } else {
+            Rating[] memory filteredRatings = new Rating[](ratings[_ratedAddress].length);
+
+            for (uint i = 0; i < ratings[_ratedAddress].length; i++) {
+                Rating memory rating = ratings[_ratedAddress][i];
+                if (_ratingType == RatingType.Positive && rating.score > 3) {
+                    filteredRatings[i] = rating;
+                } else if (_ratingType == RatingType.Negative && rating.score < 3) {
+                    filteredRatings[i] = rating;
+                }
+            }
+
+            return filteredRatings;
+        }
+    }
+
+    /// @dev If the rating type is both, return all the ratings count
+    ///      Otherwise, return the ratings count filtered by the rating type
+    function getRatingsCount(address _ratedAddress, RatingType _ratingType) external view returns (uint) {
+        if (_ratingType == RatingType.Both) {
+            return ratings[_ratedAddress].length;
+        } else {
+            uint count = 0;
+            for (uint i = 0; i < ratings[_ratedAddress].length; i++) {
+                Rating memory rating = ratings[_ratedAddress][i];
+                if (_ratingType == RatingType.Positive && rating.score > 3) {
+                    count++;
+                } else if (_ratingType == RatingType.Negative && rating.score < 3) {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
 
     /// @custom:modifies jobExists
     /// @custom:reverts NullAddressError
