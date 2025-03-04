@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/// @title Interface for the job marketplace
-/// @author https://github.com/MulinEgor
-interface IWorkContract {
+/// @title Interface for the contract responsible for the job creation and management
+interface IJobContract {
     // MARK: Structs
 
-    // @notice Struct for the job
-    // @dev When creating a job, the employer must specify the payment, deadline, and description
+    /// @notice Struct for the job
+    /// @dev When creating a job, the employer must specify the payment, deadline, and description
     struct Job {
         address employer;
         address employee;
@@ -15,17 +14,9 @@ interface IWorkContract {
         JobStatus status;
         string description;
         uint deadline;
+        string workResult;
         uint createdAt;
         uint updatedAt;
-    }
-
-    // @notice Struct for rating
-    struct Rating {
-        uint jobId;
-        uint8 score;
-        string comment;
-        Role role;
-        uint createdAt;
     }
 
     // MARK: Enums
@@ -39,37 +30,28 @@ interface IWorkContract {
         Cancelled
     }
 
-    // @notice Enum for job role
-    enum Role {
-        Employer,
-        Employee
-    }
-
     // MARK: Events
 
-    // @notice Event for the job creation
+    /// @notice Event for the job creation
     event JobCreatedEvent(uint jobId, address employer, uint payment, uint deadline, string description);
 
-    // @notice Event for the job application
+    /// @notice Event for the job application
     event JobApplicationEvent(uint jobId, address employee);
 
-    // @notice Event for the job assignment
+    /// @notice Event for the job assignment
     event JobAssignedEvent(uint jobId, address employee);
 
-    // @notice Event for the job waiting review
-    event JobWaitingReviewEvent(uint jobId);
+    /// @notice Event for the job waiting review
+    event JobWaitingReviewEvent(uint jobId, string workResult);
 
-    // @notice Event for the job completion
+    /// @notice Event for the job completion
     event JobCompletedEvent(uint jobId);
 
-    // @notice Event for the job cancellation
+    /// @notice Event for the job cancellation
     event JobCancelledEvent(uint jobId);
 
-    // @notice Event for the job reopening
+    /// @notice Event for the job reopening
     event JobReopenedEvent(uint jobId);
-
-    // @notice Event for the rating creation
-    event RatingCreatedEvent(address indexed ratedAddress, uint jobId, uint8 score, string comment);
 
     // MARK: Errors
 
@@ -100,7 +82,16 @@ interface IWorkContract {
     // @notice Error for the job that is not completed
     error JobNotCompletedError(uint jobId);
 
-    // MARK: Job functions
+    // @notice Error for the job that is not cancelled
+    error JobNotCancelledError(uint jobId);
+
+    // @notice Error for the job that is already cancelled
+    error JobAlreadyCancelledError(uint jobId);
+
+    // @notice Error for the job that is already waiting review
+    error JobAlreadyWaitingReviewError(uint jobId);
+
+    // MARK: Unathorized functions
 
     // @notice Function for the job creation
     // @param _deadline The deadline for the job
@@ -146,21 +137,6 @@ interface IWorkContract {
 
     // @notice Function for the job waiting review. Only for the employee
     // @param _jobId The id of the job
-    function askToReviewJob(uint _jobId) external;
-
-    // MARK: Rating functions
-
-    // @notice Function for creating a rating
-    // @param _jobId The id of the job
-    // @param _score The score of the rating
-    // @param _comment The comment of the rating
-    // @param _role The role of the rating
-    // @param _ratedAddress The address of the rated
-    function createRating(
-        uint _jobId,
-        uint8 _score,
-        string memory _comment,
-        Role _role,
-        address _ratedAddress
-    ) external;
+    // @param _workResult The work result for the job
+    function askToReviewJob(uint _jobId, string memory _workResult) external;
 }

@@ -2,11 +2,13 @@
 pragma solidity ^0.8.26;
 
 import "../lib/Ownable.sol";
-import "../interfaces/IWorkContract.sol";
+import "../interfaces/IJobContract.sol";
+import "../interfaces/IRatingContract.sol";
+import "../interfaces/IReviewContract.sol";
 
 /// @title Contract for the job marketplace
 /// @author https://github.com/MulinEgor
-contract WorkContract is IWorkContract, Ownable {
+contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingContract, Ownable {
     // MARK: Variables
 
     /// @notice Mapping for the jobs
@@ -17,17 +19,22 @@ contract WorkContract is IWorkContract, Ownable {
     uint internal _nextJobId;
 
     /// @notice Mapping for the job applications
-    /// @dev The key is the job index, the value is the applicants addresses
+    /// @dev The key is the job id, the value is the applicants addresses
     mapping(uint => address[]) public jobApplications;
 
     /// @notice Mapping for the ratings
     mapping(address => Rating[]) public ratings;
 
+    /// @notice Mapping for the reviews
+    /// @dev The key is the employee address, the value is the mapping,
+    ///      where the key is the job id and the value is the array of reviews
+    mapping(address => mapping(uint => Review[])) public reviews;
+
     // MARK: Modifiers
 
     /// @notice Modifier to check if a job exists
     /// @param _jobId The id of the job to check
-    /// @custom:reverts JobNotFoundError if the job doesn't exist
+    /// @custom:reverts JobNotFoundError
     modifier jobExists(uint _jobId) {
         require(jobs[_jobId].employer != address(0), JobNotFoundError(_jobId));
         _;
@@ -35,7 +42,7 @@ contract WorkContract is IWorkContract, Ownable {
 
     /// @notice Modifier for the user that is employer for that job
     /// @param _jobId The id of the job to check
-    /// @custom:reverts NotAnEmployerError if the user is not the employer
+    /// @custom:reverts NotAnEmployerError
     modifier onlyEmployer(uint _jobId) {
         require(jobs[_jobId].employer == msg.sender, NotAnEmployerError(_jobId));
         _;
@@ -43,7 +50,7 @@ contract WorkContract is IWorkContract, Ownable {
 
     /// @notice Modifier for the user that is employee for that job
     /// @param _jobId The id of the job to check
-    /// @custom:reverts NotAnEmployeeError if the user is the employer
+    /// @custom:reverts NotAnEmployeeError
     modifier onlyEmployee(uint _jobId) {
         require(jobs[_jobId].employee == msg.sender, NotAnEmployeeError(_jobId));
         _;
@@ -54,7 +61,7 @@ contract WorkContract is IWorkContract, Ownable {
     /// @notice Constructor for the WorkContract
     constructor() Ownable(msg.sender) {}
 
-    // MARK: Functions
+    // MARK: Unathorized job functions
 
     /// @custom:emits JobCreatedEvent
     function createJob(uint _deadline, string memory _description) external payable {
@@ -65,6 +72,7 @@ contract WorkContract is IWorkContract, Ownable {
             status: JobStatus.Open,
             description: _description,
             deadline: _deadline,
+            workResult: "",
             createdAt: block.timestamp,
             updatedAt: block.timestamp
         });
@@ -74,24 +82,27 @@ contract WorkContract is IWorkContract, Ownable {
         _nextJobId++;
     }
 
-    /// @custom:reverts JobNotFoundError if the job is not found
+    /// @custom:modifies jobExists
     function getJob(uint _jobId) external view jobExists(_jobId) returns (Job memory) {
         return jobs[_jobId];
     }
 
-    // MARK: Employer functions
+    // MARK: Employer job functions
 
-    /// @custom:reverts NotAnEmployerError if the user is not the employer
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
     function getJobApplications(
         uint _jobId
     ) external view jobExists(_jobId) onlyEmployer(_jobId) returns (address[] memory) {
         return jobApplications[_jobId];
     }
 
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts JobNotOpenedError if the job is not opened
-    /// @custom:reverts EmployeeDidNotApplyError if the employee did not apply for the job
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
+    /// @custom:reverts JobNotOpenedError
+    /// @custom:reverts EmployeeDidNotApplyError
     /// @custom:emits JobAssignedEvent
+    /// @dev Change job status to in progress and assign the employee to the job
     function assignJob(uint _jobId, address _employee) external jobExists(_jobId) onlyEmployer(_jobId) {
         require(jobs[_jobId].status == JobStatus.Open, JobNotOpenedError(_jobId));
 
@@ -110,46 +121,55 @@ contract WorkContract is IWorkContract, Ownable {
         emit JobAssignedEvent(_jobId, _employee);
     }
 
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts JobNotWaitingReviewError if the job is not waiting review
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
+    /// @custom:reverts JobNotWaitingReviewError
     /// @custom:emits JobCompletedEvent
+    /// @dev Change job status to completed and send the payment to the employee
     function completeJob(uint _jobId) external jobExists(_jobId) onlyEmployer(_jobId) {
         require(jobs[_jobId].status == JobStatus.WaitingReview, JobNotWaitingReviewError(_jobId));
 
-        // Chaning job status and sending the payment to the employee
         jobs[_jobId].status = JobStatus.Completed;
         payable(jobs[_jobId].employee).transfer(jobs[_jobId].payment);
 
         emit JobCompletedEvent(_jobId);
     }
 
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts NotAnEmployerError if the user is not the employer
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
+    /// @custom:reverts JobAlreadyCancelledError
+    /// @custom:reverts JobAlreadyWaitingReviewError
     /// @custom:emits JobCancelledEvent
+    /// @dev Change job status to cancelled and send the payment back to the employer
     function cancelJob(uint _jobId) external jobExists(_jobId) onlyEmployer(_jobId) {
-        // Chaning job status and sending the payment back to the employer
+        require(jobs[_jobId].status != JobStatus.Cancelled, JobAlreadyCancelledError(_jobId));
+        require(jobs[_jobId].status != JobStatus.WaitingReview, JobAlreadyWaitingReviewError(_jobId));
+
         jobs[_jobId].status = JobStatus.Cancelled;
         payable(jobs[_jobId].employer).transfer(jobs[_jobId].payment);
 
         emit JobCancelledEvent(_jobId);
     }
 
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts NotAnEmployerError if the user is not the employer
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
+    /// @custom:reverts JobNotCancelledError
     /// @custom:emits JobReopenedEvent
     function reopenJob(uint _jobId) external jobExists(_jobId) onlyEmployer(_jobId) {
+        require(jobs[_jobId].status == JobStatus.Cancelled, JobNotCancelledError(_jobId));
+
         jobs[_jobId].status = JobStatus.Open;
         jobs[_jobId].employee = address(0);
 
         emit JobReopenedEvent(_jobId);
     }
 
-    // MARK: Employee functions
+    // MARK: Employee job functions
 
     /// @custom:modifies jobExists
-    /// @custom:modifies onlyEmployee
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts JobNotOpenedError if the job is not opened
+    /// @custom:reverts JobNotFoundError
+    /// @custom:reverts JobNotOpenedError
+    /// @custom:reverts NotAnEmployeeError
     /// @custom:emits JobApplicationEvent
     function applyForJob(uint _jobId) external jobExists(_jobId) {
         require(jobs[_jobId].status == JobStatus.Open, JobNotOpenedError(_jobId));
@@ -162,24 +182,51 @@ contract WorkContract is IWorkContract, Ownable {
 
     /// @custom:modifies jobExists
     /// @custom:modifies onlyEmployee
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts JobNotInProgressError if the job is not in progress
+    /// @custom:reverts JobNotInProgressError
     /// @custom:emits JobWaitingReviewEvent
-    function askToReviewJob(uint _jobId) external jobExists(_jobId) onlyEmployee(_jobId) {
+    /// @dev Change job status to waiting review and add the work result
+    function askToReviewJob(uint _jobId, string memory _workResult) external jobExists(_jobId) onlyEmployee(_jobId) {
         require(jobs[_jobId].status == JobStatus.InProgress, JobNotInProgressError(_jobId));
 
         jobs[_jobId].status = JobStatus.WaitingReview;
+        jobs[_jobId].workResult = _workResult;
 
-        emit JobWaitingReviewEvent(_jobId);
+        emit JobWaitingReviewEvent(_jobId, _workResult);
+    }
+
+    // MARK: Review functions
+
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployer
+    /// @custom:reverts JobNotWaitingReviewError
+    /// @custom:emits ReviewCreatedEvent
+    /// @dev Add review to the employee's reviews and change job status to in progress
+    function createReview(
+        uint _jobId,
+        uint8 _score,
+        string memory _comment
+    ) external jobExists(_jobId) onlyEmployer(_jobId) {
+        require(jobs[_jobId].status == JobStatus.WaitingReview, JobNotWaitingReviewError(_jobId));
+
+        Job memory job = jobs[_jobId];
+        reviews[job.employee][_jobId].push(Review({score: _score, comment: _comment, createdAt: block.timestamp}));
+        job.status = JobStatus.InProgress;
+
+        emit ReviewCreatedEvent(_jobId, _score, _comment);
+    }
+
+    /// @custom:modifies jobExists
+    /// @custom:modifies onlyEmployee
+    function getReviews(uint _jobId) external view jobExists(_jobId) onlyEmployee(_jobId) returns (Review[] memory) {
+        return reviews[msg.sender][_jobId];
     }
 
     // MARK: Rating functions
 
     /// @custom:modifies jobExists
-    /// @custom:reverts JobNotFoundError if the job is not found
-    /// @custom:reverts NullAddressError if the rated address is the zero
-    /// @custom:reverts IncorrectRoleError if the role is incorrect
+    /// @custom:reverts NullAddressError
     /// @custom:emits RatingCreatedEvent
+    /// @dev Make sure the roles are correctly specified and add rating to a mapping
     function createRating(
         uint _jobId,
         uint8 _score,
