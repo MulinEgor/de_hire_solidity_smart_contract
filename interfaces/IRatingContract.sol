@@ -35,7 +35,12 @@ interface IRatingContract {
     // MARK: Events
 
     /// @notice Event for the rating creation
-    event RatingCreatedEvent(address indexed ratedAddress, uint jobId, uint8 score, string comment);
+    event RatingCreatedEvent(address ratedAddress, uint jobId, uint8 score, string comment);
+
+    // MARK: Errors
+
+    /// @notice Error for the rating already exists
+    error RatingAlreadyExistsError(address ratedAddress, uint jobId);
 
     // MARK: Functions
 

@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import "../../interfaces/IJobContract.sol";
+import "../../interfaces/IRatingContract.sol";
+import "../../interfaces/IReviewContract.sol";
 import "../lib/Ownable.sol";
-import "../interfaces/IJobContract.sol";
-import "../interfaces/IRatingContract.sol";
-import "../interfaces/IReviewContract.sol";
 
-/// @title Contract for the job marketplace
+/// @title Decentralized Hire Contract
 /// @author https://github.com/MulinEgor
-contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingContract, Ownable {
+contract DeHireContract is IJobContract, IReviewContract, IRatingContract, Ownable {
     // MARK: Variables
 
     /// @notice Mapping for the jobs
@@ -29,7 +29,7 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     /// @notice Mapping for the reviews
     /// @dev The key is the employee address, the value is the mapping,
     ///      where the key is the job id and the value is the array of reviews
-    mapping(address => mapping(uint => Review[])) public reviews;
+    mapping(address => mapping(uint => Review[])) private reviews;
 
     // MARK: Modifiers
 
@@ -139,12 +139,10 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     /// @custom:modifies jobExists
     /// @custom:modifies onlyEmployer
     /// @custom:reverts JobAlreadyCancelledError
-    /// @custom:reverts JobAlreadyWaitingReviewError
     /// @custom:emits JobCancelledEvent
     /// @dev Change job status to cancelled and send the payment back to the employer
     function cancelJob(uint _jobId) external jobExists(_jobId) onlyEmployer(_jobId) {
         require(jobs[_jobId].status != JobStatus.Cancelled, JobAlreadyCancelledError(_jobId));
-        require(jobs[_jobId].status != JobStatus.WaitingReview, JobAlreadyWaitingReviewError(_jobId));
 
         jobs[_jobId].status = JobStatus.Cancelled;
         payable(jobs[_jobId].employer).transfer(jobs[_jobId].payment);
@@ -156,11 +154,13 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
     /// @custom:modifies onlyEmployer
     /// @custom:reverts JobNotCancelledError
     /// @custom:emits JobReopenedEvent
-    function reopenJob(uint _jobId) external jobExists(_jobId) onlyEmployer(_jobId) {
+    /// @dev Change job status to open and get payment from the employer
+    function reopenJob(uint _jobId) external payable jobExists(_jobId) onlyEmployer(_jobId) {
         require(jobs[_jobId].status == JobStatus.Cancelled, JobNotCancelledError(_jobId));
 
         jobs[_jobId].status = JobStatus.Open;
         jobs[_jobId].employee = address(0);
+        jobs[_jobId].payment = msg.value;
 
         emit JobReopenedEvent(_jobId);
     }
@@ -232,12 +232,15 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
         } else {
             Rating[] memory filteredRatings = new Rating[](ratings[_ratedAddress].length);
 
+            uint count = 0;
             for (uint i = 0; i < ratings[_ratedAddress].length; i++) {
                 Rating memory rating = ratings[_ratedAddress][i];
                 if (_ratingType == RatingType.Positive && rating.score > 3) {
-                    filteredRatings[i] = rating;
+                    filteredRatings[count] = rating;
+                    count++;
                 } else if (_ratingType == RatingType.Negative && rating.score < 3) {
-                    filteredRatings[i] = rating;
+                    filteredRatings[count] = rating;
+                    count++;
                 }
             }
 
@@ -272,8 +275,9 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
 
     /// @custom:modifies jobExists
     /// @custom:reverts NullAddressError
+    /// @custom:reverts RatingAlreadyExistsError
     /// @custom:emits RatingCreatedEvent
-    /// @dev Make sure the roles are correctly specified and add rating to a mapping
+    /// @dev Make sure the roles are correctly specified, that the rating doesn't already exist and add rating to a mapping
     function createRating(
         uint _jobId,
         uint8 _score,
@@ -289,6 +293,12 @@ contract DecentralizedHireHubContract is IJobContract, IReviewContract, IRatingC
         } else {
             require(jobs[_jobId].employee == _ratedAddress, NotAnEmployeeError(_jobId));
             require(jobs[_jobId].employer == msg.sender, NotAnEmployerError(_jobId));
+        }
+
+        for (uint i = 0; i < ratings[_ratedAddress].length; i++) {
+            if (ratings[_ratedAddress][i].jobId == _jobId) {
+                revert RatingAlreadyExistsError(_ratedAddress, _jobId);
+            }
         }
 
         ratings[_ratedAddress].push(

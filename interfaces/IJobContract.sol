@@ -127,7 +127,7 @@ interface IJobContract {
 
     // @notice Function for the job reopening. Only for the employer
     // @param _jobId The id of the job
-    function reopenJob(uint _jobId) external;
+    function reopenJob(uint _jobId) external payable;
 
     // MARK: Employee functions
 
