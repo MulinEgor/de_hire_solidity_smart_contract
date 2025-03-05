@@ -1,4 +1,4 @@
-# Solidity job smart contract
+# Solidity smart contract for decentralized hiring platform 
 
 ![Solidity](https://img.shields.io/badge/Solidity-%23363636.svg?style=for-the-badge&logo=solidity&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
@@ -32,15 +32,26 @@ python3 -m pipx ensurepath
 pipx install eth-brownie
 ```
 
-## Compile and test
+## Compile contracts
 
 ```bash
 brownie compile
+```
+
+## Run test
+
+```bash
 brownie test
 ```
 
-## Run script
+## Deploy to testnet
 
+1. Create `.env` file based on `.env.example` and fill it with your data:
 ```bash
-brownie run scripts/script_name.py
+cp .env.example .env
+```
+
+2. Run deploy script
+```bash
+brownie run scripts/deploy_to_testnet.py
 ```
