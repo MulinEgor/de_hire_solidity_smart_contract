@@ -32,15 +32,26 @@ python3 -m pipx ensurepath
 pipx install eth-brownie
 ```
 
-## Compile and test
+## Compile contracts
 
 ```bash
 brownie compile
+```
+
+## Run test
+
+```bash
 brownie test
 ```
 
-## Run script
+## Deploy to testnet
 
+1. Create `.env` file based on `.env.example` and fill it with your data:
 ```bash
-brownie run scripts/script_name.py
+cp .env.example .env
+```
+
+2. Run deploy script
+```bash
+brownie run scripts/deploy_to_testnet.py
 ```

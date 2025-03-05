@@ -1,0 +1,23 @@
+dotenv: .env
+
+networks:
+  default: development
+  development:
+    gas_limit: 12000000
+    gas_price: 20000000000
+  sepolia:
+    verify: True
+    gas_limit: 3000000
+  
+
+wallets:
+  from_key: ${PRIVATE_KEY}
+
+etherscan:
+  api_key: ${ETHERSCAN_TOKEN}
+
+compiler:
+  solc:
+    optimizer:
+      enabled: true
+      runs: 200
