@@ -1,4 +1,4 @@
-# Solidity job smart contract
+# Solidity smart contract for decentralized hiring platform 
 
 ![Solidity](https://img.shields.io/badge/Solidity-%23363636.svg?style=for-the-badge&logo=solidity&logoColor=white)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
