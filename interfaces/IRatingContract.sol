@@ -1,78 +1,65 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/// @title Interface for the contract responsible for the rating creation and management
+/// @title Interface for the contract responsible for the rating management
 interface IRatingContract {
     // MARK: Structs
 
-    /// @notice Struct for the job
-    /// @dev When creating a job, the employer must specify the payment, deadline, and description
-
-    /// @notice Struct for ratings
+    /// @dev When creating a rating, the person specifies the comment as a regular string
+    ///      and then the hash of the comment is stored on the blockchain
     struct Rating {
         uint jobId;
+        address ratedPersonAddress;
         uint8 score;
-        string comment;
         Role role;
-        uint createdAt;
+        bytes32 commentHash;
     }
 
     // MARK: Enums
 
-    /// @notice Enum for job roles
     enum Role {
         Employer,
         Employee
     }
 
-    /// @notice Enum for rating types
-    enum RatingType {
-        Positive,
-        Negative,
-        Both
-    }
-
     // MARK: Events
 
-    /// @notice Event for the rating creation
-    event RatingCreatedEvent(address ratedAddress, uint jobId, uint8 score, string comment);
+    event RatingCreatedEvent(
+        uint indexed jobId,
+        address indexed ratedPersonAddress,
+        uint8 score,
+        Role role,
+        string comment
+    );
 
     // MARK: Errors
 
-    /// @notice Error for the rating already exists
-    error RatingAlreadyExistsError(address ratedAddress, uint jobId);
+    error RatingAlreadyExistsError(uint jobId, address ratedPersonAddress, Role role);
 
     // MARK: Functions
 
     /// @notice Function for creating a rating
     /// @param _jobId The id of the job
+    /// @param _ratedPersonAddress The address of the rated person(employer or employee based on _role param)
     /// @param _score The score from 1 to 5
-    /// @param _comment The comment
     /// @param _role The role (employer or employee)
-    /// @param _ratedAddress The address of the rated person(employer or employee based on _role param)
+    /// @param _comment The comment
+    /// @dev Comment gets hashed and stored in this form on the blockchain
     function createRating(
         uint _jobId,
+        address _ratedPersonAddress,
         uint8 _score,
-        string memory _comment,
         Role _role,
-        address _ratedAddress
+        string memory _comment
     ) external;
 
-    /// @notice Function for getting all the ratings for specified address
-    /// @param _ratedAddress The address of the rated person
-    /// @param _ratingType The type of the rating
-    /// @return The ratings
-    function getRatings(address _ratedAddress, RatingType _ratingType) external view returns (Rating[] memory);
+    /// @notice Function for getting all the ratings for the person
+    /// @param _personAddress The address of the person
+    /// @param _role The role (employer or employee)
+    /// @return All the ratings for the person
+    function getRatings(address _personAddress, Role _role) external view returns (Rating[] memory);
 
-    /// @notice Function for getting the ratings count
-    /// @param _ratedAddress The address of the rated person
-    /// @param _ratingType The type of the rating
-    /// @return The ratings count
-    function getRatingsCount(address _ratedAddress, RatingType _ratingType) external view returns (uint);
-
-    /// @notice Function for getting the karma,
-    ///         where karma is (positive ratings count - negative ratings count)
-    /// @param _address The address of the person
-    /// @return The karma
-    function getKarma(address _address) external view returns (int);
+    /// @notice Function for getting all the ratings
+    /// @return All the ratings
+    function getAllRatings() external view returns (Rating[] memory);
 }

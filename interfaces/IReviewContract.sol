@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/// @title Interface for the contract responsible for the review creation and management
+/// @title Interface for the contract responsible for the review management
 interface IReviewContract {
     // MARK: Structs
 
-    /// @notice Struct for the review
+    /// @dev When creating a review, the person specifies the comment as a regular string
+    ///      and then the hash of the comment is stored on the blockchain
     struct Review {
+        uint jobId;
         uint8 score;
-        string comment;
-        uint createdAt;
+        bytes32 commentHash;
     }
 
     // MARK: Events
 
-    /// @notice Event for the review creation
-    event ReviewCreatedEvent(uint jobId, uint8 score, string comment);
+    event ReviewCreatedEvent(uint indexed jobId, uint8 score, string comment);
 
     // MARK: Functions
 
@@ -23,6 +23,7 @@ interface IReviewContract {
     /// @param _jobId The id of the job
     /// @param _score The score from 1 to 5
     /// @param _comment The comment
+    /// @dev Comment gets hashed and stored in this form on the blockchain
     function createReview(uint _jobId, uint8 _score, string memory _comment) external;
 
     /// @notice Function for getting the reviews
