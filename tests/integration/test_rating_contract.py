@@ -6,7 +6,7 @@ Interface for that part is (IRatingContract).
 import brownie
 import pytest
 
-from tests.data_types import Rating, RatingType, Role
+from tests.data_types import Rating, Role
 
 
 # MARK: Create
@@ -21,16 +21,20 @@ def test_create_rating_as_employer_for_completed_job(
 
     contract.createRating(
         completed_job_id,
-        5,
-        "test_comment",
-        Role.Employee.value,
         employee.address,
+        5,
+        Role.Employee.value,
+        "test_comment",
         {"from": employer},
     )
 
-    ratings_count = contract.getRatingsCount(employee.address, RatingType.Both.value)
+    ratings = contract.getAllRatings()
+    ratings = [Rating(**rating) for rating in ratings]
 
-    assert ratings_count == 1
+    assert len(ratings) == 1
+    assert ratings[0].ratedPersonAddress == employee.address
+    assert ratings[0].score == 5
+    assert ratings[0].role == Role.Employee.value
 
 
 def test_create_rating_as_employee_for_completed_job(
@@ -44,16 +48,20 @@ def test_create_rating_as_employee_for_completed_job(
 
     contract.createRating(
         completed_job_id,
-        5,
-        "test_comment",
-        Role.Employer.value,
         employer.address,
+        5,
+        Role.Employer.value,
+        "test_comment",
         {"from": employee},
     )
 
-    ratings_count = contract.getRatingsCount(employer.address, RatingType.Both.value)
+    ratings = contract.getAllRatings()
+    ratings = [Rating(**rating) for rating in ratings]
 
-    assert ratings_count == 1
+    assert len(ratings) == 1
+    assert ratings[0].ratedPersonAddress == employer.address
+    assert ratings[0].score == 5
+    assert ratings[0].role == Role.Employer.value
 
 
 def test_create_rating_with_incorrect_role(
@@ -68,16 +76,17 @@ def test_create_rating_with_incorrect_role(
     with pytest.raises(brownie.exceptions.VirtualMachineError):
         contract.createRating(
             completed_job_id,
+            employee.address,
             5,
+            Role.Employer.value,
             "test_comment",
-            Role.Employee.value,
-            employer.address,
-            {"from": employee},
+            {"from": employer},
         )
 
-    ratings_count = contract.getRatingsCount(employer.address, RatingType.Both.value)
+    ratings = contract.getAllRatings()
+    ratings = [Rating(**rating) for rating in ratings]
 
-    assert ratings_count == 0
+    assert len(ratings) == 0
 
 
 def test_create_rating_for_not_completed_job(
@@ -92,121 +101,47 @@ def test_create_rating_for_not_completed_job(
     with pytest.raises(brownie.exceptions.VirtualMachineError):
         contract.createRating(
             created_job_id,
+            employee.address,
             5,
-            "test_comment",
             Role.Employee.value,
-            employer.address,
+            "test_comment",
             {"from": employer},
         )
 
-    ratings_count = contract.getRatingsCount(employee.address, RatingType.Both.value)
+    ratings = contract.getAllRatings()
+    ratings = [Rating(**rating) for rating in ratings]
 
-    assert ratings_count == 0
+    assert len(ratings) == 0
 
 
 # MARK: Get
-def test_get_ratings_negative(contract, rating, employee, created_positive_rating_id):
+def test_get_ratings(contract, rating, employee, created_rating_id):
     """
     Test for getting ratings.
 
     Check that negative ratings are empty as a single rating there is positive.
     """
 
-    ratings = contract.getRatings(employee.address, RatingType.Negative.value)
+    ratings = contract.getRatings(employee.address, Role.Employee.value)
     ratings = [Rating(**rating) for rating in ratings]
 
-    assert ratings[0].comment != rating.comment
+    assert len(ratings) == 1
+    assert ratings[0].ratedPersonAddress == employee.address
+    assert ratings[0].score == rating.score
+    assert ratings[0].role == rating.role
 
 
-def test_get_ratings_positive(contract, rating, employee, created_positive_rating_id):
+def test_get_all_ratings(contract, rating, created_rating_id):
     """
     Test for getting ratings.
 
     Check that positive ratings are returned correctly.
     """
 
-    ratings = contract.getRatings(employee.address, RatingType.Positive.value)
+    ratings = contract.getAllRatings()
     ratings = [Rating(**rating) for rating in ratings]
 
     assert len(ratings) == 1
+    assert ratings[0].ratedPersonAddress == rating.ratedPersonAddress
     assert ratings[0].score == rating.score
-    assert ratings[0].comment == rating.comment
-
-
-def test_get_ratings_both(contract, rating, employee, created_positive_rating_id):
-    """
-    Test for getting ratings.
-
-    Check that positive ratings are returned correctly.
-    """
-
-    ratings = contract.getRatings(employee.address, RatingType.Both.value)
-    ratings = [Rating(**rating) for rating in ratings]
-
-    assert len(ratings) == 1
-    assert ratings[0].score == rating.score
-    assert ratings[0].comment == rating.comment
-
-
-def test_get_ratings_count_negative(contract, employee, created_positive_rating_id):
-    """
-    Test for getting the ratings count.
-
-    Check that negative ratings count is 0 as a single rating there is positive.
-    """
-
-    ratings_count = contract.getRatingsCount(
-        employee.address, RatingType.Negative.value
-    )
-
-    assert ratings_count == 0
-
-
-def test_get_ratings_count_positive(
-    contract,
-    employee,
-    created_positive_rating_id,
-):
-    """
-    Test for getting the ratings count.
-
-    Check that positive ratings count is 1 as a single rating there is positive.
-    """
-
-    ratings_count = contract.getRatingsCount(
-        employee.address, RatingType.Positive.value
-    )
-
-    assert ratings_count == 1
-
-
-def test_get_ratings_count_both(
-    contract,
-    employee,
-    created_positive_rating_id,
-):
-    """
-    Test for getting the ratings count.
-
-    Check that both ratings count is 1 as there are only one rating.
-    """
-
-    ratings_count = contract.getRatingsCount(employee.address, RatingType.Both.value)
-
-    assert ratings_count == 1
-
-
-def test_get_karma(
-    contract,
-    employee,
-    created_negative_rating_id,
-):
-    """
-    Test for getting the karma.
-
-    Check that karma is -1 as a single rating there is negative.
-    """
-
-    karma = contract.getKarma(employee.address)
-
-    assert karma == -1
+    assert ratings[0].role == rating.role

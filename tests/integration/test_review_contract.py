@@ -23,7 +23,6 @@ def test_create_review_as_employer(contract, employer, employee, waiting_review_
     reviews = [Review(**review) for review in reviews]
 
     assert reviews[0].score == 5
-    assert reviews[0].comment == "test_comment"
 
 
 def test_create_review_as_employee(contract, employee, waiting_review_job_id):

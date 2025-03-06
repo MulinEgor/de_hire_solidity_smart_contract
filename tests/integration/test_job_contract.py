@@ -21,19 +21,18 @@ def test_create_job(contract, employer, unassigned_job):
 
     contract.createJob(
         unassigned_job.deadline,
-        unassigned_job.description,
+        "",
+        [],
         {"from": employer, "value": unassigned_job.payment},
     )
 
     job = Job(*contract.getJob(0))
 
-    assert job.employer == unassigned_job.employer
+    assert job.employerAddress == unassigned_job.employerAddress
     assert employer_balance_before > employer.balance()
     assert job.payment == unassigned_job.payment
     assert job.status == JobStatus.Open.value
-    assert job.description == unassigned_job.description
     assert job.deadline == unassigned_job.deadline
-    assert job.workResult == unassigned_job.workResult
 
 
 # MARK: Apply
@@ -79,8 +78,9 @@ def test_assign_job_as_employer(contract, employer, employee, applied_job_id):
 
     job = Job(*contract.getJob(applied_job_id))
 
-    assert job.employer == employer.address
-    assert job.employee == employee.address
+    assert job.employerAddress == employer.address
+    assert job.employeeAddress == employee.address
+    assert job.status == JobStatus.InProgress.value
 
 
 def test_assign_job_as_employee(contract, employer, employee, applied_job_id):
@@ -95,8 +95,8 @@ def test_assign_job_as_employee(contract, employer, employee, applied_job_id):
 
     job = Job(*contract.getJob(applied_job_id))
 
-    assert job.employer == employer.address
-    assert job.employee != employee.address
+    assert job.employerAddress == employer.address
+    assert job.employeeAddress != employee.address
 
 
 # MARK: Ask to review
@@ -112,8 +112,8 @@ def test_ask_to_review_job_as_employer(contract, employer, employee, assigned_jo
 
     job = Job(*contract.getJob(assigned_job_id))
 
-    assert job.employer == employer.address
-    assert job.employee == employee.address
+    assert job.employerAddress == employer.address
+    assert job.employeeAddress == employee.address
     assert job.status != JobStatus.WaitingReview.value
 
 
@@ -128,8 +128,8 @@ def test_ask_to_review_job_as_employee(contract, employer, employee, assigned_jo
 
     job = Job(*contract.getJob(assigned_job_id))
 
-    assert job.employer == employer.address
-    assert job.employee == employee.address
+    assert job.employerAddress == employer.address
+    assert job.employeeAddress == employee.address
     assert job.status == JobStatus.WaitingReview.value
 
 

@@ -18,37 +18,29 @@ class Role(Enum):
     Employee = 1
 
 
-class RatingType(Enum):
-    Positive = 0
-    Negative = 1
-    Both = 2
-
-
 # MARK: Classes
 @dataclass
 class Job:
-    employer: str
-    employee: str
-    payment: int
+    employerAddress: str
+    employeeAddress: str
     status: JobStatus
-    description: str
+    payment: int
     deadline: int
-    workResult: str
-    createdAt: int
-    updatedAt: int
+    descriptionHash: str
+    skillsHash: str
 
 
 @dataclass
 class Rating:
     jobId: int
+    ratedPersonAddress: str
     score: int
-    comment: str
     role: Role
-    createdAt: int
+    commentHash: str
 
 
 @dataclass
 class Review:
+    jobId: int
     score: int
-    comment: str
-    createdAt: int
+    commentHash: str

@@ -42,15 +42,13 @@ def unassigned_job(employer) -> Job:
     """
 
     return Job(
-        employer.address,
-        "",
-        100,
-        JobStatus.Open.value,
-        "Test job",
-        "123412341",
-        "",
-        0,
-        0,
+        employerAddress=employer.address,
+        employeeAddress="",
+        status=JobStatus.Open.value,
+        payment=100,
+        deadline=0,
+        descriptionHash="",
+        skillsHash="",
     )
 
 
@@ -66,7 +64,8 @@ def created_job_id(
 
     contract.createJob(
         unassigned_job.deadline,
-        unassigned_job.description,
+        "",
+        [],
         {"from": employer, "value": unassigned_job.payment},
     )
 
@@ -119,50 +118,32 @@ def completed_job_id(contract, waiting_review_job_id, employer) -> int:
 
 # MARK: Rating
 @pytest.fixture
-def rating(completed_job_id) -> Rating:
+def rating(completed_job_id, employee) -> Rating:
     """
     Fixture for getting a Rating class instance.
     """
 
     return Rating(
-        completed_job_id,
-        5,
-        "test_comment",
-        Role.Employee.value,
-        0,
+        jobId=completed_job_id,
+        ratedPersonAddress=employee.address,
+        score=5,
+        role=Role.Employee.value,
+        commentHash="",
     )
 
 
 @pytest.fixture
-def created_positive_rating_id(contract, employee, employer, rating) -> int:
+def created_rating_id(contract, employer, rating) -> int:
     """
-    Fixture for creating a positive rating for a completed job and returning its ID.
+    Fixture for creating rating for a completed job and returning its ID.
     """
 
     contract.createRating(
         rating.jobId,
+        rating.ratedPersonAddress,
         rating.score,
-        rating.comment,
         rating.role,
-        employee.address,
-        {"from": employer},
-    )
-
-    return 0
-
-
-@pytest.fixture
-def created_negative_rating_id(contract, employee, employer, rating) -> int:
-    """
-    Fixture for creating a negative rating for a completed job and returning its ID.
-    """
-
-    contract.createRating(
-        rating.jobId,
-        1,
-        rating.comment,
-        rating.role,
-        employee.address,
+        rating.commentHash,
         {"from": employer},
     )
 
@@ -171,15 +152,15 @@ def created_negative_rating_id(contract, employee, employer, rating) -> int:
 
 # MARK: Review
 @pytest.fixture
-def review() -> Review:
+def review(waiting_review_job_id) -> Review:
     """
     Fixture for getting a Review class instance.
     """
 
     return Review(
-        5,
-        "test_comment",
-        0,
+        jobId=waiting_review_job_id,
+        score=5,
+        commentHash="",
     )
 
 
@@ -190,7 +171,10 @@ def created_review_id(contract, employer, review, waiting_review_job_id) -> int:
     """
 
     contract.createReview(
-        waiting_review_job_id, review.score, review.comment, {"from": employer}
+        review.jobId,
+        review.score,
+        review.commentHash,
+        {"from": employer},
     )
 
     return 0
