@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {IJobContract, IRatingContract, IReviewContract} from "../../interfaces/index.sol";
+import {IJobContract, IRatingContract, IReviewContract, IResumeContract} from "../../interfaces/index.sol";
 import {Ownable} from "../lib/index.sol";
 
 /// @title Decentralized Hire Contract
 /// @author https://github.com/MulinEgor
-contract DeHireContract is IJobContract, IReviewContract, IRatingContract, Ownable {
+contract DeHireContract is IJobContract, IReviewContract, IRatingContract, IResumeContract, Ownable {
     // MARK: Variables
 
     /// @dev Using mapping instead of an array to optimize the gas usage
@@ -27,6 +27,12 @@ contract DeHireContract is IJobContract, IReviewContract, IRatingContract, Ownab
 
     /// @dev Counter for knowing ratings length
     uint internal _nextRatingId;
+
+    /// @dev The key is the person address, the value is the resume
+    mapping(address => Resume) internal _employerResumes;
+
+    /// @dev The key is the person address, the value is the resume
+    mapping(address => Resume) internal _employeeResumes;
 
     // MARK: Modifiers
 
@@ -302,5 +308,42 @@ contract DeHireContract is IJobContract, IReviewContract, IRatingContract, Ownab
         }
 
         return allRatings;
+    }
+
+    // MARK: Resume functions
+    function createResume(IRatingContract.Role _role, string memory _name, string memory _description) external {
+        if (_role == IRatingContract.Role.Employer) {
+            require(
+                _employerResumes[msg.sender].personAddress == address(0),
+                ResumeAlreadyExistsError(msg.sender, _role)
+            );
+
+            _employerResumes[msg.sender] = Resume({
+                personAddress: msg.sender,
+                role: _role,
+                nameHash: keccak256(abi.encode(_name)),
+                descriptionHash: keccak256(abi.encode(_description))
+            });
+        } else {
+            require(
+                _employeeResumes[msg.sender].personAddress == address(0),
+                ResumeAlreadyExistsError(msg.sender, _role)
+            );
+
+            _employeeResumes[msg.sender] = Resume({
+                personAddress: msg.sender,
+                role: _role,
+                nameHash: keccak256(abi.encode(_name)),
+                descriptionHash: keccak256(abi.encode(_description))
+            });
+        }
+    }
+
+    function getResume(address _personAddress, IRatingContract.Role _role) external view returns (Resume memory) {
+        if (_role == IRatingContract.Role.Employer) {
+            return _employerResumes[_personAddress];
+        } else {
+            return _employeeResumes[_personAddress];
+        }
     }
 }
