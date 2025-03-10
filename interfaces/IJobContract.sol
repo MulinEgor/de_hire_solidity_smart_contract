@@ -18,7 +18,6 @@ interface IJobContract {
     }
 
     // MARK: Enums
-
     enum JobStatus {
         Open,
         InProgress,
@@ -28,7 +27,6 @@ interface IJobContract {
     }
 
     // MARK: Events
-
     event JobCreatedEvent(
         uint indexed jobId,
         address indexed employerAddress,

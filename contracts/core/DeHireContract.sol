@@ -220,9 +220,7 @@ contract DeHireContract is IJobContract, IReviewContract, IRatingContract, IResu
         require(_jobs[_jobId].status == JobStatus.WaitingReview, JobNotWaitingReviewError(_jobId));
 
         Job memory job = _jobs[_jobId];
-        _reviews[_jobId][job.employeeAddress].push(
-            Review({score: _score, commentHash: keccak256(abi.encode(_comment)), jobId: _jobId})
-        );
+        _reviews[_jobId][job.employeeAddress].push(Review({score: _score, comment: _comment, jobId: _jobId}));
         job.status = JobStatus.InProgress;
 
         emit ReviewCreatedEvent(_jobId, _score, _comment);
